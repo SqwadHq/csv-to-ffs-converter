@@ -78,6 +78,16 @@
         .modal ul { padding-left: 1.2rem; }
         .modal li { margin: .2rem 0; }
         .modal .note { background: #fffbe6; border-left: 3px solid #f0c000; padding: .5rem .8rem; margin: .8rem 0; font-size: .9rem; }
+
+        /* Results banner */
+        #resultsBanner { display: none; margin: 1.5rem 0; padding: 1rem 1.2rem; border-radius: 6px; font-size: .9rem; }
+        #resultsBanner.has-skipped { background: #fff8e1; border: 1px solid #f0c000; }
+        #resultsBanner.all-mapped { background: #e8f5e9; border: 1px solid #66bb6a; }
+        #resultsBanner h3 { margin: 0 0 .4rem; font-size: 1rem; }
+        #resultsBanner .stats { margin-bottom: .5rem; }
+        #resultsBanner .skipped-list { margin: .3rem 0 0; padding-left: 1.2rem; }
+        #resultsBanner .skipped-list li { margin: .15rem 0; }
+        #resultsBanner code { background: #f0f0f0; padding: .1rem .3rem; border-radius: 3px; font-size: .85rem; }
     </style>
 </head>
 <body>
@@ -216,6 +226,8 @@
     <br>
     <button type="submit">Upload and Convert</button>
 </form>
+
+<div id="resultsBanner"></div>
 
 <div id="fullscreenLoader">
     <div class="spinner"></div>
@@ -824,6 +836,82 @@ async function downloadFiles(files) {
 }
 
 // =====================================================================
+// COLUMN RECOGNITION
+// =====================================================================
+const KNOWN_COLUMNS_SHARED = new Set([
+    'Email', 'email', 'First Name', 'firstName', 'Last Name', 'lastName',
+    'Phone Number', 'phoneHome', 'phoneWork', 'Street', 'street1', 'street2',
+    'City', 'city', 'State', 'state', 'Zip Code', 'zip', 'country',
+    'title', 'middleInitial', 'suffix', 'businessName', 'businessFlag',
+    'consumerKey', 'divisionCode',
+    'UTM Campaign', 'campaignNumber', 'Sequence Number', 'sequenceNumber', 'SRC Code',
+    'Sign Up Time', 'requestDate', 'vin', 'preferredDealer',
+    'fulfillmentCode', 'fulfillmentYear', 'fulfillmentChannel', 'fulfillmentLanguage',
+    'What is your annual household income?',
+    'How much time did you spend in the exhibition?',
+    'How far did you travel to visit the exhibition?',
+    'How likely is it that you would recommend this exhibition to a friend or colleague?',
+    'How did you learn about the exhibition?',
+    'Who are you visiting with today?',
+    'Are you a current Ford owner?',
+]);
+const KNOWN_COLUMNS_MAIN_ONLY = new Set([
+    'Brochure Language',
+    'What age range do you fall into?',
+    'Select Gender',
+    'What is your current vehicle make?',
+    'When do you plan to acquire your next vehicle?',
+    'Ford is a brand that helps me do the things I love.',
+    'Ford is a brand that helps me feel capable and confident.',
+]);
+
+function getKnownColumns(useNfl) {
+    const known = new Set(KNOWN_COLUMNS_SHARED);
+    if (!useNfl) KNOWN_COLUMNS_MAIN_ONLY.forEach(c => known.add(c));
+    return known;
+}
+
+function isKnownColumn(colName, knownSet) {
+    if (knownSet.has(colName)) return true;
+    // Dynamic patterns: question1-30, answer1-30, Vehicle #N, SRC Code Vehicle #N
+    if (/^question\d{1,2}$/.test(colName)) return true;
+    if (/^answer\d{1,2}$/.test(colName)) return true;
+    if (/^Vehicle\s*#\s*\d+$/i.test(colName)) return true;
+    if (/^SRC Code Vehicle\s*#?\s*\d+$/i.test(colName)) return true;
+    // Checkbox columns matched by pattern
+    if (matchCheckboxColumnName(colName)) return true;
+    return false;
+}
+
+function findSkippedColumns(csvHeaders, useNfl) {
+    const known = getKnownColumns(useNfl);
+    return csvHeaders.filter(h => h && h.trim() && !isKnownColumn(h.trim(), known));
+}
+
+function showResultsBanner(totalRows, filteredCount, skippedCols) {
+    const banner = document.getElementById('resultsBanner');
+    const droppedRows = totalRows - filteredCount;
+
+    let html = '<h3>Conversion Complete</h3>';
+    html += `<div class="stats"><strong>${filteredCount}</strong> rows converted`;
+    if (droppedRows > 0) html += ` (${droppedRows} row${droppedRows !== 1 ? 's' : ''} skipped — missing valid email)`;
+    html += '</div>';
+
+    if (skippedCols.length > 0) {
+        banner.className = 'has-skipped';
+        html += `<div><strong>${skippedCols.length} column${skippedCols.length !== 1 ? 's' : ''} not recognized</strong> (data in these columns was ignored):</div>`;
+        html += '<ul class="skipped-list">' + skippedCols.map(c => `<li><code>${c}</code></li>`).join('') + '</ul>';
+        html += '<div class="muted" style="margin-top:.4rem">Click the <strong>i</strong> button above for the full list of supported column names.</div>';
+    } else {
+        banner.className = 'all-mapped';
+        html += '<div>All columns were recognized.</div>';
+    }
+
+    banner.innerHTML = html;
+    banner.style.display = 'block';
+}
+
+// =====================================================================
 // FORM HANDLING
 // =====================================================================
 const form = document.getElementById('uploadForm');
@@ -873,6 +961,9 @@ form.addEventListener('submit', async function (e) {
         const exportFormat = document.getElementById('exportFormat').value;
         const useNfl = toggle.checked;
 
+        const csvHeaders = parsed.meta.fields || [];
+        const skippedCols = findSkippedColumns(csvHeaders, useNfl);
+        const totalRows = rows.length;
         const filteredRows = preprocessRows(rows);
 
         let files;
@@ -884,6 +975,7 @@ form.addEventListener('submit', async function (e) {
         }
 
         await downloadFiles(files);
+        showResultsBanner(totalRows, filteredRows.length, skippedCols);
     } catch (err) {
         console.error(err);
         alert('Error converting file: ' + (err?.message || 'Unknown error'));
