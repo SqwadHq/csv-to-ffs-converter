@@ -43,10 +43,142 @@
             background: #eef2f7; border: 1px solid #d9e1ec; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
             font-size: .85rem; vertical-align: middle; margin-left: .4rem;
         }
+
+        /* Info button */
+        .info-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%; border: 2px solid #3498db;
+            background: none; color: #3498db; font-weight: bold; font-size: 1rem;
+            cursor: pointer; margin-left: .5rem; vertical-align: middle;
+            font-family: Georgia, serif; line-height: 1;
+        }
+        .info-btn:hover { background: #3498db; color: #fff; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            display: none; justify-content: center; align-items: center; z-index: 10000;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: #fff; border-radius: 8px; max-width: 800px; width: 90%;
+            max-height: 85vh; overflow-y: auto; padding: 2rem; position: relative;
+        }
+        .modal-close {
+            position: sticky; top: 0; float: right; background: none; border: none;
+            font-size: 1.5rem; cursor: pointer; color: #888; line-height: 1;
+        }
+        .modal-close:hover { color: #333; }
+        .modal h2 { margin-top: 0; }
+        .modal h3 { margin-top: 1.5rem; margin-bottom: .5rem; border-bottom: 1px solid #eee; padding-bottom: .3rem; }
+        .modal table { width: 100%; border-collapse: collapse; margin: .5rem 0 1rem; font-size: .9rem; }
+        .modal th, .modal td { text-align: left; padding: .4rem .6rem; border: 1px solid #e0e0e0; }
+        .modal th { background: #f5f7fa; }
+        .modal code { background: #f0f0f0; padding: .1rem .3rem; border-radius: 3px; font-size: .85rem; }
+        .modal ul { padding-left: 1.2rem; }
+        .modal li { margin: .2rem 0; }
+        .modal .note { background: #fffbe6; border-left: 3px solid #f0c000; padding: .5rem .8rem; margin: .8rem 0; font-size: .9rem; }
     </style>
 </head>
 <body>
-<h1>CSV to FFS Converter</h1>
+<h1>CSV to FFS Converter <button class="info-btn" id="openInfo" title="Column mapping guide">i</button></h1>
+
+<!-- Column Reference Modal -->
+<div class="modal-overlay" id="infoModal">
+<div class="modal">
+<button class="modal-close" id="closeInfo">&times;</button>
+<h2>CSV Column Mapping Guide</h2>
+<p>Name your CSV column headers to match the names below so the converter can read them.</p>
+
+<h3>Required</h3>
+<table>
+    <tr><th>Column Name</th><th>Description</th></tr>
+    <tr><td><code>Email</code></td><td>Email address &mdash; rows without a valid email are filtered out</td></tr>
+</table>
+
+<h3>Personal Information</h3>
+<table>
+    <tr><th>Column Name</th><th>Alternatives</th><th>Description</th></tr>
+    <tr><td><code>First Name</code></td><td><code>firstName</code></td><td>First name</td></tr>
+    <tr><td><code>Last Name</code></td><td><code>lastName</code></td><td>Last name</td></tr>
+    <tr><td><code>Phone Number</code></td><td><code>phoneHome</code></td><td>Home phone</td></tr>
+    <tr><td><code>phoneWork</code></td><td>&ndash;</td><td>Work phone</td></tr>
+    <tr><td><code>Street</code></td><td><code>street1</code></td><td>Street address line 1</td></tr>
+    <tr><td><code>street2</code></td><td>&ndash;</td><td>Street address line 2</td></tr>
+    <tr><td><code>City</code></td><td><code>city</code></td><td>City</td></tr>
+    <tr><td><code>State</code></td><td><code>state</code></td><td>State code (2 chars)</td></tr>
+    <tr><td><code>Zip Code</code></td><td><code>zip</code></td><td>ZIP (5-digit or ZIP+4)</td></tr>
+    <tr><td><code>title</code></td><td>&ndash;</td><td>Salutation (Mr., Ms., etc.)</td></tr>
+    <tr><td><code>middleInitial</code></td><td>&ndash;</td><td>Middle initial (1 char)</td></tr>
+    <tr><td><code>suffix</code></td><td>&ndash;</td><td>Name suffix (Jr., Sr.)</td></tr>
+    <tr><td><code>businessName</code></td><td>&ndash;</td><td>Business name</td></tr>
+    <tr><td><code>country</code></td><td>&ndash;</td><td>Country (defaults to USA)</td></tr>
+</table>
+
+<h3>Campaign &amp; Tracking</h3>
+<table>
+    <tr><th>Column Name</th><th>Alternatives</th><th>Description</th></tr>
+    <tr><td><code>UTM Campaign</code></td><td><code>campaignNumber</code></td><td>Campaign identifier</td></tr>
+    <tr><td><code>Sequence Number</code></td><td><code>sequenceNumber</code>, <code>SRC Code</code></td><td>Source code. Supports "campaign-sequence" format</td></tr>
+    <tr><td><code>SRC Code Vehicle #1</code></td><td>&ndash;</td><td>Per-vehicle source code</td></tr>
+    <tr><td><code>Sign Up Time</code></td><td><code>requestDate</code></td><td>Signup timestamp</td></tr>
+    <tr><td><code>vin</code></td><td>&ndash;</td><td>Vehicle Identification Number</td></tr>
+    <tr><td><code>preferredDealer</code></td><td>&ndash;</td><td>Preferred dealer code</td></tr>
+</table>
+
+<h3>Vehicle Selection (Main Uploader only)</h3>
+<table>
+    <tr><th>Column Name</th><th>Description</th></tr>
+    <tr><td><code>Vehicle #1</code>, <code>Vehicle #2</code>, ...</td><td>Vehicle name/model for fulfillment lookup</td></tr>
+    <tr><td><code>Brochure Language</code></td><td><code>EN</code> (English) or <code>SP</code> (Spanish)</td></tr>
+</table>
+<p>Supported vehicle names:</p>
+<ul>
+    <li><strong>Ford (EN):</strong> Bronco, Bronco Sport, Electric Vehicles, Escape, Expedition, Explorer, Explorer Tremor, F-150, F-150 Lightning, F-150 Raptor R, Ford GT, Maverick, Mustang, Mustang GTD, Mustang Mach-E, Ranger, Super Duty, Transit, Transit Connect Wagon</li>
+    <li><strong>Lincoln:</strong> Aviator, Black Label, Corsair, Nautilus, Navigator</li>
+    <li><strong>Ford (SP):</strong> Edge, Escape, Expedition, Explorer, F-150, Mustang, Ranger, Super Duty</li>
+</ul>
+
+<h3>Survey Questions</h3>
+<table>
+    <tr><th>Column Name</th><th>Expected Values</th><th>Uploader</th></tr>
+    <tr><td><code>What age range do you fall into?</code></td><td>18-24, 25-29, 30-34, ... 60+</td><td>Main only</td></tr>
+    <tr><td><code>Select Gender</code></td><td>Male, Female, Prefer not to say</td><td>Main only</td></tr>
+    <tr><td><code>What is your current vehicle make?</code></td><td>Ford, Toyota, Honda, etc.</td><td>Main only</td></tr>
+    <tr><td><code>When do you plan to acquire your next vehicle?</code></td><td>0-30 days, 1-3 yrs, 4-6 yrs, 7+, no definite</td><td>Main only</td></tr>
+    <tr><td><code>Ford is a brand that helps me do the things I love.</code></td><td>1&ndash;5 (Likert)</td><td>Main only</td></tr>
+    <tr><td><code>Ford is a brand that helps me feel capable and confident.</code></td><td>1&ndash;5 (Likert)</td><td>Main only</td></tr>
+    <tr><td><code>What is your annual household income?</code></td><td>under 50k, 50-75k, 75-100k, 100-150k, over 150k</td><td>Both</td></tr>
+    <tr><td><code>How much time did you spend in the exhibition?</code></td><td>&lt;15 min, 15-30, 31-60, &gt;60</td><td>Both</td></tr>
+    <tr><td><code>How far did you travel to visit the exhibition?</code></td><td>&le;10 mi, 11-30, 31-50, 51-100, &gt;100</td><td>Both</td></tr>
+    <tr><td><code>How likely is it that you would recommend this exhibition...?</code></td><td>0&ndash;10 (NPS)</td><td>Both</td></tr>
+    <tr><td><code>How did you learn about the exhibition?</code></td><td>newspaper, billboard, social media, etc.</td><td>Both</td></tr>
+    <tr><td><code>Who are you visiting with today?</code></td><td>alone, adults only, adults &amp; children, etc.</td><td>Both</td></tr>
+</table>
+
+<h3>Consent / Checkbox Columns</h3>
+<p>These columns accept: <code>yes</code>, <code>y</code>, <code>true</code>, <code>checked</code>, <code>1</code></p>
+<table>
+    <tr><th>Column Name Pattern</th><th>Description</th></tr>
+    <tr><td>Contains "18" and "older" or "of age"</td><td>Age verification (18+)</td></tr>
+    <tr><td>Contains "21" and "older" or "of age"</td><td>Age verification (21+)</td></tr>
+    <tr><td>Contains "please email me" or "opt-in"</td><td>Email opt-in</td></tr>
+    <tr><td>Contains "official rules" and "privacy policy"</td><td>Terms acceptance</td></tr>
+    <tr><td><code>Are you a current Ford owner?</code></td><td>Ownership status</td></tr>
+</table>
+
+<h3>Custom Questions</h3>
+<table>
+    <tr><th>Column Name</th><th>Description</th></tr>
+    <tr><td><code>question1</code> &ndash; <code>question30</code></td><td>Question codes (4-digit)</td></tr>
+    <tr><td><code>answer1</code> &ndash; <code>answer30</code></td><td>Corresponding answers (up to 20 chars)</td></tr>
+</table>
+
+<div class="note">
+    <strong>Tips:</strong> Email is required per row. Empty columns are auto-removed. Vehicle names should match the list above for proper fulfillment code mapping.
+</div>
+</div>
+</div>
 
 <label class="switch">
     <input type="checkbox" id="useNflUploader" />
@@ -759,6 +891,14 @@ form.addEventListener('submit', async function (e) {
         loader.style.display = 'none';
     }
 });
+
+// =====================================================================
+// INFO MODAL
+// =====================================================================
+const infoModal = document.getElementById('infoModal');
+document.getElementById('openInfo').addEventListener('click', () => infoModal.classList.add('open'));
+document.getElementById('closeInfo').addEventListener('click', () => infoModal.classList.remove('open'));
+infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.remove('open'); });
 </script>
 </body>
 </html>
