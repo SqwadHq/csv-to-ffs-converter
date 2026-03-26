@@ -198,6 +198,10 @@
 </label>
 
 <form id="uploadForm">
+    <label for="senderEmail">Sender Email:</label>
+    <input type="email" id="senderEmail" name="senderEmail" required placeholder="you@ford.com">
+    <br>
+
     <label for="vendorId">Vendor ID:</label>
     <input type="text" id="vendorId" name="vendorId" required>
     <br>
@@ -556,8 +560,8 @@ function transformRowNfl(row, defaults) {
 // =====================================================================
 // FIXED-WIDTH RECORD FORMATTERS
 // =====================================================================
-function createHeader(vendorId) {
-    let record = "H" + pad(vendorId, 20) + pad(getCurrentDateTimeFormatted(), 16) + pad("V2", 2) + pad("", 48) + pad("tester@ford.com", 80) + pad("", 1054);
+function createHeader(vendorId, senderEmail) {
+    let record = "H" + pad(vendorId, 20) + pad(getCurrentDateTimeFormatted(), 16) + pad("V2", 2) + pad("", 48) + pad(senderEmail, 80) + pad("", 1054);
     if (record.length < 1221) record = record.padEnd(1221, " ");
     else if (record.length > 1221) record = record.substring(0, 1221);
     return record;
@@ -763,7 +767,7 @@ function processMainTxt(filteredRows, config) {
     const files = [];
     for (let i = 0; i < finalDetails.length; i += chunkSize) {
         const chunk = finalDetails.slice(i, i + chunkSize);
-        const header = createHeader(config.vendorId);
+        const header = createHeader(config.vendorId, config.senderEmail);
         const trailer = createTrailer(chunk.length, config.vendorId);
         const content = [header, ...chunk, trailer].join('\n');
         const partNum = Math.floor(i / chunkSize) + 1;
@@ -779,7 +783,7 @@ function processNflTxt(filteredRows, config) {
 
     for (let i = 0; i < filteredRows.length; i += chunkSize) {
         const chunk = filteredRows.slice(i, i + chunkSize);
-        const header = createHeader(config.vendorId);
+        const header = createHeader(config.vendorId, config.senderEmail);
         const details = chunk.map(r => createDetailNfl(r, defaults));
         const trailer = createTrailer(chunk.length, config.vendorId);
         const content = [header, ...details, trailer].join('\n');
@@ -940,6 +944,9 @@ form.addEventListener('submit', async function (e) {
     const fileInput = document.getElementById('csvFile');
     if (!fileInput.files.length) { alert("Please select a CSV file."); return; }
 
+    const senderEmail = document.getElementById('senderEmail').value.trim();
+    if (!senderEmail) { alert("Please enter a Sender Email."); return; }
+
     const vendorId = document.getElementById('vendorId').value.trim();
     if (!vendorId) { alert("Please enter a Vendor ID."); return; }
 
@@ -954,6 +961,7 @@ form.addEventListener('submit', async function (e) {
 
         const config = {
             vendorId,
+            senderEmail,
             defaultUtmCampaign: document.getElementById('defaultUtmCampaign').value,
             defaultSequenceNumber: document.getElementById('defaultSequenceNumber').value,
             rowsPerFile: parseRowsPerFile(document.getElementById('rowsPerFile').value),
