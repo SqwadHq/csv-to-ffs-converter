@@ -602,7 +602,7 @@ function createDetailMain(row, defaults) {
     let sequenceNumberRaw = (row.sequenceNumber ?? row['Sequence Number'] ?? row['SRC Code'] ?? defaults.defaultSequenceNumber ?? "");
     if (typeof sequenceNumberRaw === 'string' && sequenceNumberRaw.includes('-')) {
         const [c, s] = sequenceNumberRaw.split('-');
-        if (!campaignNumberRaw || String(campaignNumberRaw).trim() === "") campaignNumberRaw = (c || "").trim();
+        campaignNumberRaw = (c || "").trim();
         sequenceNumberRaw = (s || "").trim();
     }
     if (!campaignNumberRaw && defaults.defaultUtmCampaign) campaignNumberRaw = defaults.defaultUtmCampaign;
